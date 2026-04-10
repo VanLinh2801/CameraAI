@@ -90,12 +90,17 @@ def ensure_required_paths(settings: Settings) -> dict:
     calib_path = settings.model_root / "int8-calib.bin"
     if engine_path.exists():
         mode = "engine"
+        network_mode = "1"
     elif etlt_path.exists() and calib_path.exists():
-        mode = "etlt"
+        mode = "etlt_int8"
+        network_mode = "1"
+    elif etlt_path.exists():
+        mode = "etlt_fp32"
+        network_mode = "0"
     else:
         raise FileNotFoundError(
             "No supported PeopleNet artifacts found. Expected one of: "
-            "'model.engine' or both 'model.etlt' and 'int8-calib.bin'."
+            "'model.engine', 'model.etlt', or both 'model.etlt' and 'int8-calib.bin'."
         )
 
     if not settings.labels_path.exists():
@@ -106,6 +111,7 @@ def ensure_required_paths(settings: Settings) -> dict:
 
     return {
         "mode": mode,
+        "network_mode": network_mode,
         "engine_path": str(engine_path),
         "etlt_path": str(etlt_path),
         "calib_path": str(calib_path),
@@ -120,6 +126,7 @@ def render_pgie_config(settings: Settings) -> Path:
     replacements = {
         "__MODEL_ROOT__": str(settings.model_root),
         "__LABELS_PATH__": model_info["labels_path"],
+        "__NETWORK_MODE__": model_info["network_mode"],
         "__ENGINE_FILE_BLOCK__": "",
         "__MODEL_FILE_BLOCK__": "",
         "__OUTPUT_BLOB_NAMES_BLOCK__": "output-blob-names=output_bbox/BiasAdd;output_cov/Sigmoid",
@@ -128,11 +135,13 @@ def render_pgie_config(settings: Settings) -> Path:
     if model_info["mode"] == "engine":
         replacements["__ENGINE_FILE_BLOCK__"] = f"model-engine-file={model_info['engine_path']}"
     else:
-        replacements["__MODEL_FILE_BLOCK__"] = (
-            f"tlt-encoded-model={model_info['etlt_path']}\n"
-            "tlt-model-key=tlt_encode\n"
-            f"int8-calib-file={model_info['calib_path']}"
-        )
+        model_file_block_lines = [
+            f"tlt-encoded-model={model_info['etlt_path']}",
+            "tlt-model-key=tlt_encode",
+        ]
+        if model_info["mode"] == "etlt_int8":
+            model_file_block_lines.append(f"int8-calib-file={model_info['calib_path']}")
+        replacements["__MODEL_FILE_BLOCK__"] = "\n".join(model_file_block_lines)
 
     for key, value in replacements.items():
         rendered = rendered.replace(key, value)

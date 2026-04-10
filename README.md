@@ -31,8 +31,10 @@ The DeepStream service expects PeopleNet artifacts under `deepstream/models/peop
 Supported options:
 
 - Preferred: `model.engine`
-- Or TAO export files: `model.etlt` and `int8-calib.bin`
-- Optional custom labels file if you do not want to use the default bundled labels
+- Or TAO export files:
+  - `model.etlt` and `int8-calib.bin` for INT8
+  - `model.etlt` and `labels.txt` for FP32 fallback when no calibration cache is available
+- The runtime labels path is expected at `deepstream/models/peoplenet/labels.txt`
 
 The container will fail fast with a clear startup error if no compatible PeopleNet model
 artifacts are mounted.

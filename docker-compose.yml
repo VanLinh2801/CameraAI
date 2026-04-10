@@ -47,7 +47,7 @@ services:
       DEEPSTREAM_OUTPUT_HEIGHT: "720"
       DEEPSTREAM_OUTPUT_FPS: "30"
       DEEPSTREAM_MODEL_ROOT: /models/peoplenet
-      DEEPSTREAM_LABELS_PATH: /opt/cameraai/deepstream/config/labels_peoplenet.txt
+      DEEPSTREAM_LABELS_PATH: /models/peoplenet/labels.txt
       DEEPSTREAM_TRACKER_CONFIG: /opt/cameraai/deepstream/config/nvtracker_config.txt
     volumes:
       - ./deepstream/models:/models:rw
