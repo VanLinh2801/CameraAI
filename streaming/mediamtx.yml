@@ -1,0 +1,10 @@
+logLevel: info
+logDestinations: [stdout]
+rtsp: true
+rtspAddress: :8554
+rtspTransports: [tcp]
+paths:
+  camera:
+    source: publisher
+  analytics:
+    source: publisher

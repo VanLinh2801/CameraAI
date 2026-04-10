@@ -1,0 +1,54 @@
+services:
+  mediamtx:
+    image: bluenviron/mediamtx:latest
+    container_name: cameraai-mediamtx
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - ./streaming/mediamtx.yml:/mediamtx.yml:ro
+    command: ["/mediamtx", "/mediamtx.yml"]
+
+  publisher:
+    build:
+      context: .
+      dockerfile: streaming/Dockerfile.publisher
+    container_name: cameraai-publisher
+    network_mode: host
+    restart: unless-stopped
+    depends_on:
+      - mediamtx
+    environment:
+      INPUT_VIDEO: /workspace/12h.26.9.22.mp4
+      RTSP_URL: rtsp://127.0.0.1:8554/camera
+      INPUT_FPS: "30"
+    volumes:
+      - ./:/workspace:ro
+
+  deepstream:
+    build:
+      context: .
+      dockerfile: deepstream/Dockerfile
+    container_name: cameraai-deepstream
+    network_mode: host
+    restart: unless-stopped
+    depends_on:
+      - mediamtx
+      - publisher
+    gpus: all
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility,video
+      DEEPSTREAM_INPUT_RTSP: rtsp://127.0.0.1:8554/camera
+      DEEPSTREAM_OUTPUT_RTSP: rtsp://127.0.0.1:8554/analytics
+      DEEPSTREAM_METADATA_PATH: /data/metadata/events.jsonl
+      DEEPSTREAM_RTSP_RECONNECT_INTERVAL_SEC: "5"
+      DEEPSTREAM_SOURCE_ID: camera-01
+      DEEPSTREAM_OUTPUT_WIDTH: "1280"
+      DEEPSTREAM_OUTPUT_HEIGHT: "720"
+      DEEPSTREAM_OUTPUT_FPS: "30"
+      DEEPSTREAM_MODEL_ROOT: /models/peoplenet
+      DEEPSTREAM_LABELS_PATH: /opt/cameraai/deepstream/config/labels_peoplenet.txt
+      DEEPSTREAM_TRACKER_CONFIG: /opt/cameraai/deepstream/config/nvtracker_config.txt
+    volumes:
+      - ./deepstream/models:/models:rw
+      - ./deepstream/output:/data/metadata:rw
